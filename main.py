@@ -23,13 +23,44 @@ n_relations = 0
 
 
 def get_feed_dict(train_entity_pairs, start, end):
-    train_entity_pairs = torch.LongTensor(np.array([[cf[0], cf[1], cf[2]] for cf in train_entity_pairs], np.int32))
-    feed_dict = {}
+
+    if start >= len(train_entity_pairs):
+        print("Error: start index out of range!")
+        return None
+    if start >= end:
+        print("Error: start index >= end index!")
+        return None
+
+    print(f"Fetching batch from index {start} to {end}, total length: {len(train_entity_pairs)}")
+
+    train_entity_pairs = np.array([[cf[0], cf[1], cf[2]] for cf in train_entity_pairs], np.int32)
+    
+    if train_entity_pairs.shape[1] != 3:
+        print(f"Error: train_entity_pairs shape {train_entity_pairs.shape} is incorrect!")
+        return None
+
+    train_entity_pairs = torch.LongTensor(train_entity_pairs)
     entity_pairs = train_entity_pairs[start:end].to(device)
-    feed_dict['users'] = entity_pairs[:, 0]
-    feed_dict['items'] = entity_pairs[:, 1]
-    feed_dict['labels'] = entity_pairs[:, 2]
+
+    if entity_pairs.shape[0] == 0:
+        print(f"Error: No data in batch {start}:{end}")
+        return None
+
+    feed_dict = {
+        'users': entity_pairs[:, 0],
+        'items': entity_pairs[:, 1],
+        'labels': entity_pairs[:, 2]
+    }
     return feed_dict
+
+
+    # train_entity_pairs = torch.LongTensor(np.array([[cf[0], cf[1], cf[2]] for cf in train_entity_pairs], np.int32))
+    # feed_dict = {}
+    # entity_pairs = train_entity_pairs[start:end].to(device)
+    # feed_dict['users'] = entity_pairs[:, 0]
+    # feed_dict['items'] = entity_pairs[:, 1]
+    # feed_dict['labels'] = entity_pairs[:, 2]
+    # return feed_dict
 
 def get_feed_dict_topk(train_entity_pairs, start, end):
     train_entity_pairs = torch.LongTensor(np.array([[cf[0], cf[1], cf[2]] for cf in train_entity_pairs], np.int32))
@@ -165,6 +196,20 @@ if __name__ == '__main__':
 
     """build dataset"""
     train_cf, test_cf, user_dict, n_params, graph, mat_list = load_data(args)
+    print("训练数据 train_cf 维度:", train_cf.shape)
+    print("测试数据 test_cf 维度:", test_cf.shape)
+    print(train_cf[:5])  # 检查数据是否正常
+    #print(train_cf.dtypes if isinstance(train_cf, numpy.array) else type(train_cf))
+    print(type(train_cf))  # 查看 train_cf 是什么类型
+    train_cf = train_cf.astype(int)
+    test_cf = test_cf.astype(int)
+
+    
+
+
+
+
+
     adj_mat_list, norm_mat_list, mean_mat_list = mat_list
 
     n_users = n_params['n_users']
@@ -192,18 +237,37 @@ if __name__ == '__main__':
 
     print("start training ...")
     for epoch in range(args.epoch):
+
+      
+    
+
         """training CF"""
         # shuffle training data
         index = np.arange(len(train_cf))
         np.random.shuffle(index)
         train_cf = train_cf[index]
+        print(f"train_cf shape after shuffle: {train_cf.shape}")
+
 
         """training"""
         loss, s, cor_loss = 0, 0, 0
         train_s_t = time()
         while s + args.batch_size <= len(train_cf):
             batch = get_feed_dict(train_cf, s, s + args.batch_size)
+            print(f"Processing batch {s}-{s+args.batch_size}, batch = {batch}")
+            if batch is None:
+              print("Error: batch is None!")
+              break  # 退出循环
+            for param in model.parameters():
+              if param.grad is not None:
+              print(param.grad)
+
+
             batch_loss, _, _, _ = model(batch)
+            
+
+            print(f"batch_loss type: {type(batch_loss)}")
+
             # batch_loss = batch_loss
             optimizer.zero_grad()
             batch_loss.backward()
@@ -212,6 +276,8 @@ if __name__ == '__main__':
             loss += batch_loss
             # cor_loss += batch_cor
             s += args.batch_size
+
+            print(f"Step {s}, batch shape: {batch.shape}")
 
         train_e_t = time()
         # tsne_plot(model.all_embed, epoch)
