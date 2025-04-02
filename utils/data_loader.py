@@ -47,12 +47,24 @@ def read_cf_new():
     # rating_np = rating_np.take(indix_click[0], axis=0)
     # rating_np = rating_np.take([0, 1], axis=1)
 
+    #print(f"Max train index: {max(train_indices)}, Rating data shape: {rating_np.shape}")
+    print(f"rating_np shape: {rating_np.shape}")
+    print(f"rating_np sample:\n{rating_np[:10]}")  # 打印前10行
+    #rating_np = rating_np[:, :2]  # 只保留前两列 [user_id, item_id]
+    print(f"rating_np shape: {rating_np.shape}")
+    print(f"rating_np sample:\n{rating_np[:10]}")  # 打印前10行
+
+
     test_ratio = 0.2
     n_ratings = rating_np.shape[0]
+
+
+    #print(n_ratings)
     eval_indices = np.random.choice(n_ratings, size=int(n_ratings * test_ratio), replace=False)
     left = set(range(n_ratings)) - set(eval_indices)
     # test_indices = np.random.choice(list(left), size=int(n_ratings * test_ratio), replace=False)
     train_indices = list(left)
+    print("train indices")
 
     train_data = rating_np[train_indices]
     eval_data = rating_np[eval_indices]
@@ -64,9 +76,25 @@ def read_cf_new():
 
 def generate_ui_adj(rating, train_rating):
     #ui_adj = sp.dok_matrix((n_user, n_item), dtype=np.float32)
+    print("len")
+    print(len(set(rating[:, 0])))
     n_user, n_item = len(set(rating[:, 0])), len(set(rating[:, 1]))
+    #ui_adj_orign = sp.coo_matrix(
+    #   (train_rating[:, 2], (train_rating[:, 0], train_rating[:, 1])), shape=(n_user, n_item)).todok()
+    # valid_users = train_rating[:, 0] < n_users
+    # valid_items = train_rating[:, 1] < n_items
+    # train_rating = train_rating[valid_users & valid_items]
+    print(train_rating[:, 0])
+    print(train_rating[:, 1])
+    print(f"num_users: {n_user}, num_items: {n_item}")
+    print(f"Max train user_id: {train_rating[:, 0].max()}, Max train item_id: {train_rating[:, 1].max()}")
+
+
+
     ui_adj_orign = sp.coo_matrix(
-        (train_rating[:, 2], (train_rating[:, 0], train_rating[:, 1])), shape=(n_user, n_item)).todok()
+        (np.ones(len(train_rating)), (train_rating[:, 0], train_rating[:, 1])),
+        shape=(np.max(rating[:, 0]) + 1,  np.max(rating[:, 1]) + 1)
+    )
 
     # ui_adj = sp.dok_matrix((n_user+n_item, n_user+n_item), dtype=np.float32)
     # ui_adj[:n_user, n_user:] = ui_adj_orign
