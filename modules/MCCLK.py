@@ -169,6 +169,7 @@ class GraphConv(nn.Module):
 
 class Recommender(nn.Module):
     def __init__(self, data_config, args_config, graph, adj_mat):
+        print("into init~~~")
         super(Recommender, self).__init__()
 
         self.n_users = data_config['n_users']
@@ -215,11 +216,13 @@ class Recommender(nn.Module):
                 )
 
     def _init_weight(self):
+        print("into weight~~~")
         initializer = nn.init.xavier_uniform_
         self.all_embed = initializer(torch.empty(self.n_nodes, self.emb_size))
         self.interact_mat = self._convert_sp_mat_to_sp_tensor(self.adj_mat).to(self.device)
 
     def _init_model(self):
+        print("into model~~~")
         return GraphConv(channel=self.emb_size,
                          n_hops=self.context_hops,
                          n_users=self.n_users,
@@ -249,11 +252,40 @@ class Recommender(nn.Module):
         self,
         batch=None,
                 ):
+        print("into forward~~~")
+
         user = batch['users']
         item = batch['items']
+        user = user - 1  # 假设用户索引从1开始
+        item = item - 45  # 假设物品索引从45开始
+        user = user.long()
+        item = item.long()
+        item = torch.clamp(item, min=0, max=self.n_entities - 1)
+
         labels = batch['labels']
+        print(f"user min: {user.min().item()}, user max: {user.max().item()}, expected range: [0, {self.n_users - 1}]")
+        print(f"item min: {item.min().item()}, item max: {item.max().item()}, expected range: [0, {self.n_entities - 1}]")
+    # 确保索引在合法范围内
+        if user.max().item() >= self.n_users or user.min().item() < 0:
+          raise IndexError("User index out of range!")
+
+        if item.max().item() >= self.n_entities or item.min().item() < 0:
+          raise IndexError("Item index out of range!")
+
         user_emb = self.all_embed[:self.n_users, :]
         item_emb = self.all_embed[self.n_users:, :]
+        #print(f"entity_gcn_emb.shape: {entity_gcn_emb.shape}")
+        print(f"user_emb in GCN: {user_emb.shape}")  # 应该是 (num_users, emb_size)
+        print(f"item_emb in GCN: {item_emb.shape}")  # 应该是 (num_items, emb_size)
+        print(f"edge_index in GCN: {self.edge_index.shape}")  # 应该是 (2, num_edges)
+        print(f"edge_type in GCN: {self.edge_type.shape}")  # 应该是 (num_edges,)
+        print(f"interact_mat in GCN: {self.interact_mat.shape}")  # 应该是 (num_users, num_items
+
+        print(f"user_emb.shape: {user_emb.shape}, item_emb.shape: {item_emb.shape}")
+        print(f"edge_index.shape: {self.edge_index.shape}, edge_type.shape: {self.edge_type.shape}")
+        print(f"interact_mat.shape: {self.interact_mat.shape}")
+
+
         entity_gcn_emb, user_gcn_emb, item_adj = self.gcn(user_emb,
                                  item_emb,
                                  self.edge_index,
@@ -261,8 +293,12 @@ class Recommender(nn.Module):
                                  self.interact_mat,
                                  mess_dropout=self.mess_dropout,
                                  node_dropout=self.node_dropout)
+        
+        print(f"entity_gcn_emb.shape: {entity_gcn_emb.shape}, expected: ({self.n_entities}, {self.emb_size})")
+        
         u_e = user_gcn_emb[user]
         i_e = entity_gcn_emb[item]
+        
         i_h = item_emb
         for i in range(self.n_item_layer):
             i_h = torch.sparse.mm(item_adj, i_h)
@@ -377,6 +413,7 @@ class Recommender(nn.Module):
         return ret
 
     def light_gcn(self, user_embedding, item_embedding, adj):
+        print("into gcn~~~")
         ego_embeddings = torch.cat((user_embedding, item_embedding), dim=0)
         all_embeddings = [ego_embeddings]
         for i in range(self.lightgcn_layer):
