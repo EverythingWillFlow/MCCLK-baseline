@@ -125,7 +125,7 @@ def remap_item(train_data, eval_data):
 def read_triplets(file_name):
     global n_entities, n_relations, n_nodes
 
-    can_triplets_np = np.loadtxt(file_name, dtype=np.int32)
+    can_triplets_np = np.loadtxt(file_name, dtype=np.int32,usecols=(0,1,2))
     can_triplets_np = np.unique(can_triplets_np, axis=0)
 
     if args.inverse_r:
