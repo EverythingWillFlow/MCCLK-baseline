@@ -1,4 +1,3 @@
-
 import random
 import numpy as np
 import torch
@@ -9,11 +8,21 @@ from torch_scatter import scatter_mean, scatter_softmax, scatter_sum
 class Aggregator(nn.Module):
     def __init__(self, n_users):
         super(Aggregator, self).__init__()
+        print("into aggregator init ")
         self.n_users = n_users
 
     def forward(self, entity_emb, user_emb,
                 edge_index, edge_type, interact_mat,
                 weight):
+        print("into aggregator forward ")
+            # Add safety checks
+        head, tail = edge_index
+        head = torch.clamp(head, 0, entity_emb.shape[0] - 1)
+        tail = torch.clamp(tail, 0, entity_emb.shape[0] - 1)
+        edge_index = torch.stack([head, tail])
+        
+        # Ensure edge_type indices are valid
+        edge_type = torch.clamp(edge_type - 1, 0, weight.shape[0] - 1)
 
         n_entities = entity_emb.shape[0]
 
@@ -56,12 +65,14 @@ class GraphConv(nn.Module):
     def __init__(self, channel, n_hops, n_users,
                   n_relations, interact_mat,
                  ind, node_dropout_rate=0.5, mess_dropout_rate=0.1):
+        print("into GRAPh Conv~~")
         super(GraphConv, self).__init__()
-
+        
         self.convs = nn.ModuleList()
         self.interact_mat = interact_mat
         self.n_relations = n_relations
         self.n_users = n_users
+        self.n_entities = interact_mat.shape[1] 
         self.node_dropout_rate = node_dropout_rate
         self.mess_dropout_rate = mess_dropout_rate
         self.ind = ind
@@ -72,7 +83,7 @@ class GraphConv(nn.Module):
         initializer = nn.init.xavier_uniform_
         weight = initializer(torch.empty(n_relations - 1, channel))
         self.weight = nn.Parameter(weight)  # [n_relations - 1, in_channel]
-
+        print("into n_hops~")
         for i in range(n_hops):
             self.convs.append(Aggregator(n_users=n_users))
 
@@ -108,6 +119,44 @@ class GraphConv(nn.Module):
 
     def forward(self, user_emb, entity_emb, edge_index, edge_type,
                 interact_mat, mess_dropout=True, node_dropout=False):
+
+              # Print dimensions for debugging
+        print(f"entity_emb shape: {entity_emb.shape}")
+        print(f"expected shape: ({self.n_entities}, {entity_emb.shape[1]})")
+        
+        # Handle dimension mismatch
+        if entity_emb.shape[0] != self.n_entities:
+            if entity_emb.shape[0] > self.n_entities:
+                entity_emb = entity_emb[:self.n_entities]
+            else:
+                # Pad if smaller
+                pad_size = self.n_entities - entity_emb.shape[0]
+                padding = torch.zeros(pad_size, entity_emb.shape[1], device=entity_emb.device)
+                entity_emb = torch.cat([entity_emb, padding], dim=0)
+
+        # Rest of the forward method remains the same
+        if node_dropout:
+            edge_index, edge_type = self._edge_sampling(edge_index, edge_type, self.node_dropout_rate)
+            interact_mat = self._sparse_dropout(interact_mat, self.node_dropout_rate)
+
+
+        assert user_emb.shape[0] == self.n_users, f"User embedding dimension mismatch: {user_emb.shape[0]} vs {self.n_users}"
+        assert entity_emb.shape[0] == self.n_entities - self.n_users, f"Entity embedding dimension mismatch"
+    
+        # Ensure all tensors are on the same device
+        edge_index = edge_index.to(self.device)
+        edge_type = edge_type.to(self.device)
+        interact_mat = interact_mat.to(self.device)
+    
+        """node dropout"""
+        if node_dropout:
+            edge_index, edge_type = self._edge_sampling(edge_index, edge_type, self.node_dropout_rate)
+            interact_mat = self._sparse_dropout(interact_mat, self.node_dropout_rate)
+
+        # Ensure valid indices
+        edge_type = torch.clamp(edge_type, 0, self.n_relations - 2)  # Adjust index range
+
+
 
         """node dropout"""
         if node_dropout:
@@ -256,8 +305,7 @@ class Recommender(nn.Module):
 
         user = batch['users']
         item = batch['items']
-        user = user - 1  # 假设用户索引从1开始
-        item = item - 45  # 假设物品索引从45开始
+
         user = user.long()
         item = item.long()
         item = torch.clamp(item, min=0, max=self.n_entities - 1)
