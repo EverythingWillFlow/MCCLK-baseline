@@ -357,9 +357,14 @@ class Recommender(nn.Module):
         item = batch['items']
         labels = batch['labels']
         
-        # 修正嵌入获取
-        user_emb = self.all_embed[:self.n_users, :]
-        entity_emb = self.all_embed[self.n_users:, :]  # entity_emb 就是 item_emb
+        user_emb = self.all_embed[:self.n_users, :]  # (45919, 64)
+        entity_emb = self.all_embed[self.n_users:, :]  # (90580, 64)
+        item_emb = self.all_embed[self.n_users:self.n_users + self.n_items, :]  # (45538, 64)，用于 lightGCN
+        
+        print(f"user_emb: {user_emb.shape}")
+        print(f"entity_emb: {entity_emb.shape}")
+        print(f"item_emb: {item_emb.shape}")
+
 
         print(f"Debug - 嵌入形状:")
         print(f"user_emb: {user_emb.shape}")
@@ -372,7 +377,7 @@ class Recommender(nn.Module):
 
 
 
-        entity_emb = item_emb  # ✅ 修正：GCN只需要实体部分的嵌入
+       
 
         entity_gcn_emb, user_gcn_emb, item_adj = self.gcn(
             user_emb, entity_emb,
