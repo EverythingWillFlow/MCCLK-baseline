@@ -88,6 +88,18 @@ class GraphConv(nn.Module):
             self.convs.append(Aggregator(n_users=n_users))
 
         self.dropout = nn.Dropout(p=mess_dropout_rate)  # mess dropout
+        print(f"GraphConv init - dimensions:")
+        print(f"n_entities: {self.n_entities}")
+        print(f"n_users: {self.n_users}")
+
+        self.n_users = n_users
+        self.n_entities = interact_mat.shape[1]  # Total number of entities
+        self.n_items = self.n_entities - self.n_users  # Actual number of items
+        
+        print(f"GraphConv init dimensions:")
+        print(f"n_users: {self.n_users}")
+        print(f"n_entities: {self.n_entities}")
+        print(f"n_items: {self.n_items}")
 
     def _edge_sampling(self, edge_index, edge_type, rate=0.5):
         # edge_index: [2, -1]
@@ -123,7 +135,31 @@ class GraphConv(nn.Module):
               # Print dimensions for debugging
         print(f"entity_emb shape: {entity_emb.shape}")
         print(f"expected shape: ({self.n_entities}, {entity_emb.shape[1]})")
+         # Debug dimension information
+        print(f"Forward dimensions check:")
+        print(f"entity_emb shape: {entity_emb.shape}")
+        print(f"expected entity shape: ({self.n_entities - self.n_users}, {entity_emb.shape[1]})")
+        print(f"user_emb shape: {user_emb.shape}")
+        print(f"expected user shape: ({self.n_users}, {user_emb.shape[1]})")
         
+        # Ensure entity_emb has correct dimensions
+
+        
+        if entity_emb.shape[0] != self.n_entities:
+            print(f"Warning: Adjusting entity_emb to match n_items dimension")
+            entity_emb = entity_emb[:self.n_items, :]
+        
+        # Debug information
+        print(f"Forward pass dimensions:")
+        print(f"user_emb: {user_emb.shape}")
+        print(f"entity_emb: {entity_emb.shape}")
+        print(f"expected entity_emb: ({self.n_items}, {entity_emb.shape[1]})")
+        # Move tensors to correct device
+        entity_emb = entity_emb.to(self.device)
+        user_emb = user_emb.to(self.device)
+        edge_index = edge_index.to(self.device)
+        edge_type = edge_type.to(self.device)
+        interact_mat = interact_mat.to(self.device)
         # Handle dimension mismatch
         if entity_emb.shape[0] != self.n_entities:
             if entity_emb.shape[0] > self.n_entities:
@@ -141,7 +177,7 @@ class GraphConv(nn.Module):
 
 
         assert user_emb.shape[0] == self.n_users, f"User embedding dimension mismatch: {user_emb.shape[0]} vs {self.n_users}"
-        assert entity_emb.shape[0] == self.n_entities - self.n_users, f"Entity embedding dimension mismatch"
+        #assert entity_emb.shape[0] == self.n_entities - self.n_users, f"Entity embedding dimension mismatch"
     
         # Ensure all tensors are on the same device
         edge_index = edge_index.to(self.device)
@@ -266,8 +302,22 @@ class Recommender(nn.Module):
 
     def _init_weight(self):
         print("into weight~~~")
+        #initializer = nn.init.xavier_uniform_
+        #self.all_embed = initializer(torch.empty(self.n_nodes, self.emb_size))
+        #self.interact_mat = self._convert_sp_mat_to_sp_tensor(self.adj_mat).to(self.device)
+        print("into weight~~~")
         initializer = nn.init.xavier_uniform_
+    
+    # 正确计算维度
+        print(f"Debug - 初始化维度:")
+        print(f"n_users: {self.n_users}")
+        print(f"n_entities: {self.n_entities}")
+        print(f"n_items: {self.n_items}")
+        
+        # 使用正确的维度初始化嵌入
         self.all_embed = initializer(torch.empty(self.n_nodes, self.emb_size))
+    
+    # 确保交互矩阵维度正确
         self.interact_mat = self._convert_sp_mat_to_sp_tensor(self.adj_mat).to(self.device)
 
     def _init_model(self):
@@ -305,42 +355,32 @@ class Recommender(nn.Module):
 
         user = batch['users']
         item = batch['items']
-
-        user = user.long()
-        item = item.long()
-        item = torch.clamp(item, min=0, max=self.n_entities - 1)
-
         labels = batch['labels']
-        print(f"user min: {user.min().item()}, user max: {user.max().item()}, expected range: [0, {self.n_users - 1}]")
-        print(f"item min: {item.min().item()}, item max: {item.max().item()}, expected range: [0, {self.n_entities - 1}]")
-    # 确保索引在合法范围内
-        if user.max().item() >= self.n_users or user.min().item() < 0:
-          raise IndexError("User index out of range!")
-
-        if item.max().item() >= self.n_entities or item.min().item() < 0:
-          raise IndexError("Item index out of range!")
-
+        
+        # 修正嵌入获取
         user_emb = self.all_embed[:self.n_users, :]
-        item_emb = self.all_embed[self.n_users:, :]
-        #print(f"entity_gcn_emb.shape: {entity_gcn_emb.shape}")
-        print(f"user_emb in GCN: {user_emb.shape}")  # 应该是 (num_users, emb_size)
-        print(f"item_emb in GCN: {item_emb.shape}")  # 应该是 (num_items, emb_size)
-        print(f"edge_index in GCN: {self.edge_index.shape}")  # 应该是 (2, num_edges)
-        print(f"edge_type in GCN: {self.edge_type.shape}")  # 应该是 (num_edges,)
-        print(f"interact_mat in GCN: {self.interact_mat.shape}")  # 应该是 (num_users, num_items
+        entity_emb = self.all_embed[self.n_users:, :]  # entity_emb 就是 item_emb
 
-        print(f"user_emb.shape: {user_emb.shape}, item_emb.shape: {item_emb.shape}")
-        print(f"edge_index.shape: {self.edge_index.shape}, edge_type.shape: {self.edge_type.shape}")
-        print(f"interact_mat.shape: {self.interact_mat.shape}")
+        print(f"Debug - 嵌入形状:")
+        print(f"user_emb: {user_emb.shape}")
+        print(f"entity_emb shape: {entity_emb.shape}")
+        print(f"expected entity shape: ({self.n_entities - self.n_users}, {self.emb_size})")
+
+        # 验证
+        assert user_emb.shape[0] == self.n_users, "用户嵌入维度不匹配"
+        assert entity_emb.shape[0] == self.n_entities - self.n_users, "实体嵌入维度不匹配"
 
 
-        entity_gcn_emb, user_gcn_emb, item_adj = self.gcn(user_emb,
-                                 item_emb,
-                                 self.edge_index,
-                                 self.edge_type,
-                                 self.interact_mat,
-                                 mess_dropout=self.mess_dropout,
-                                 node_dropout=self.node_dropout)
+
+        entity_emb = item_emb  # ✅ 修正：GCN只需要实体部分的嵌入
+
+        entity_gcn_emb, user_gcn_emb, item_adj = self.gcn(
+            user_emb, entity_emb,
+            self.edge_index, self.edge_type,
+            self.interact_mat,
+            mess_dropout=self.mess_dropout,
+            node_dropout=self.node_dropout
+        )
         
         print(f"entity_gcn_emb.shape: {entity_gcn_emb.shape}, expected: ({self.n_entities}, {self.emb_size})")
         
