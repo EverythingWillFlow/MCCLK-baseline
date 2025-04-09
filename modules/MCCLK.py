@@ -153,7 +153,7 @@ class GraphConv(nn.Module):
         print(f"Forward pass dimensions:")
         print(f"user_emb: {user_emb.shape}")
         print(f"entity_emb: {entity_emb.shape}")
-        print(f"expected entity_emb: ({self.n_items}, {entity_emb.shape[1]})")
+        #print(f"expected entity_emb: ({self.n_items}, {entity_emb.shape[1]})")
         # Move tensors to correct device
         entity_emb = entity_emb.to(self.device)
         user_emb = user_emb.to(self.device)
