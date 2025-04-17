@@ -106,17 +106,17 @@ class GraphConv(nn.Module):
         self.n_items = self.n_entities - self.n_users  # 新增属性
         
         # 调试输出
-        print(f"图卷积维度终极验证:")
-        print(f"交互矩阵列数: {self.n_entities}")
-        print(f"接收用户数: {self.n_users}")
-        print(f"计算项目数: {self.n_items}")
+        # print(f"图卷积维度终极验证:")
+        # print(f"交互矩阵列数: {self.n_entities}")
+        # print(f"接收用户数: {self.n_users}")
+        # print(f"计算项目数: {self.n_items}")
 
         self.n_entities = interact_mat.shape[1]  # 不减去用户数
         self.n_users = n_users
         
-        print(f"图卷积维度终极验证:")
-        print(f"接收的实体总数: {self.n_entities}")
-        print(f"接收的用户数: {self.n_users}")
+        # print(f"图卷积维度终极验证:")
+        # print(f"接收的实体总数: {self.n_entities}")
+        # print(f"接收的用户数: {self.n_users}")
        
         self.node_dropout_rate = node_dropout_rate
         self.mess_dropout_rate = mess_dropout_rate
@@ -172,24 +172,24 @@ class GraphConv(nn.Module):
                 interact_mat, mess_dropout=True, node_dropout=False):
 
               # Print dimensions for debugging
-        print(f"entity_emb shape: {entity_emb.shape}")
-        print(f"expected shape: ({self.n_entities}, {entity_emb.shape[1]})")
-         # Debug dimension information
-        print(f"Forward dimensions check:")
-        print(f"entity_emb shape: {entity_emb.shape}")
-        print(f"expected entity shape: ({self.n_entities - self.n_users}, {entity_emb.shape[1]})")
-        print(f"user_emb shape: {user_emb.shape}")
-        print(f"expected user shape: ({self.n_users}, {user_emb.shape[1]})")
+        # print(f"entity_emb shape: {entity_emb.shape}")
+        # print(f"expected shape: ({self.n_entities}, {entity_emb.shape[1]})")
+        #  # Debug dimension information
+        # print(f"Forward dimensions check:")
+        # print(f"entity_emb shape: {entity_emb.shape}")
+        # print(f"expected entity shape: ({self.n_entities - self.n_users}, {entity_emb.shape[1]})")
+        # print(f"user_emb shape: {user_emb.shape}")
+        # print(f"expected user shape: ({self.n_users}, {user_emb.shape[1]})")
         
         # Ensure entity_emb has correct dimensions
 
 
         
         # Debug information
-        print(f"Forward pass dimensions:")
-        print(f"user_emb: {user_emb.shape}")
-        print(f"entity_emb: {entity_emb.shape}")
-        print(f"expected entity_emb: ({self.n_items}, {entity_emb.shape[1]})")
+        # print(f"Forward pass dimensions:")
+        # print(f"user_emb: {user_emb.shape}")
+        # print(f"entity_emb: {entity_emb.shape}")
+        # print(f"expected entity_emb: ({self.n_items}, {entity_emb.shape[1]})")
         # Move tensors to correct device
         entity_emb = entity_emb.to(self.device)
         user_emb = user_emb.to(self.device)
@@ -208,14 +208,14 @@ class GraphConv(nn.Module):
    #     print(f"预期实体维度: ({self.n_entities}, {entity_emb.shape[1]})")  # 使用n_entities而非n_items
 
         # 修正后断言（使用总实体数）：
-        print(f"预期实体维度: ({self.n_entities}, {entity_emb.shape[1]})")
+        # print(f"预期实体维度: ({self.n_entities}, {entity_emb.shape[1]})")
         assert entity_emb.shape[0] == self.n_entities, \
             f"实体维度错误：预期{self.n_entities}，实际{entity_emb.shape[0]}"
 
-        print("减小构建维度~~~~")
+        # print("减小构建维度~~~~")
         item_emb = entity_emb[self.n_users:]  # 只取 item
         origin_item_adj = self.build_adj(item_emb, self.topk)
-        print("减小构建维度执行完毕~~~~")
+        # print("减小构建维度执行完毕~~~~")
 
         
         # ----------------build item-item graph-------------------
@@ -223,7 +223,7 @@ class GraphConv(nn.Module):
 
         entity_res_emb = entity_emb  # [n_entity, channel]
         user_res_emb = user_emb  # [n_users, channel]
-        print("进入conv~ for循环")
+        # print("进入conv~ for循环")
         for i in range(len(self.convs)):
             entity_emb, user_emb = self.convs[i](entity_emb, user_emb,
                                                  edge_index, edge_type, interact_mat,
@@ -237,7 +237,7 @@ class GraphConv(nn.Module):
             """result emb"""
             entity_res_emb = torch.add(entity_res_emb, entity_emb)
             user_res_emb = torch.add(user_res_emb, user_emb)
-        print("退出conv~ for循环")
+        # print("退出conv~ for循环")
         # update item-item graph
         # entity_res_emb: [n_entities, D] = users + items
 # 只构建项目部分的相似图
@@ -250,7 +250,7 @@ class GraphConv(nn.Module):
         # item_emb = entity_res_emb[self.n_users:]  # 提取项目嵌入
         # item_adj = (1 - self.lambda_coeff) * self.build_adj(item_emb, self.topk) + \
         #    self.lambda_coeff * origin_item_adj
-        print(f"[Adj Update Done]")
+        # print(f"[Adj Update Done]")
 
         return entity_res_emb, user_res_emb, item_adj
 
@@ -383,11 +383,11 @@ class Recommender(nn.Module):
 # 从邻接矩阵获取真实维度
 
          # 验证核心参数
-        print(f"参数终极验证:")
-        print(f"adj_mat列数: {self.adj_mat.shape[1]}")
-        print(f"用户数: {self.n_users}")
-        print(f"真实项目数: {self.n_items}")
-        print(f"总实体数: {self.n_entities}")
+        # print(f"参数终极验证:")
+        # print(f"adj_mat列数: {self.adj_mat.shape[1]}")
+        # print(f"用户数: {self.n_users}")
+        # print(f"真实项目数: {self.n_items}")
+        # print(f"总实体数: {self.n_entities}")
 
 
 
@@ -401,9 +401,9 @@ class Recommender(nn.Module):
         # 使用修正后的维度初始化
         self.all_embed = initializer(torch.empty(self.n_entities, self.emb_size))
         
-        print(f"嵌入矩阵终极验证:")
-        print(f"实际维度: {self.all_embed.shape}")
-        print(f"预期维度: ({self.n_entities}, {self.emb_size})")
+        # print(f"嵌入矩阵终极验证:")
+        # print(f"实际维度: {self.all_embed.shape}")
+        # print(f"预期维度: ({self.n_entities}, {self.emb_size})")
         assert self.all_embed.shape[0] == self.n_entities, "嵌入矩阵初始化错误"
 
 
@@ -454,9 +454,9 @@ class Recommender(nn.Module):
         # 实体嵌入（完整传递）
         entity_emb = self.all_embed  # 不进行任何切片
         
-        print(f"运行时维度验证:")
-        print(f"user_emb: {user_emb.shape} (应={self.n_users})")
-        print(f"entity_emb: {entity_emb.shape} (应={self.n_entities})")
+        # print(f"运行时维度验证:")
+        # print(f"user_emb: {user_emb.shape} (应={self.n_users})")
+        # print(f"entity_emb: {entity_emb.shape} (应={self.n_entities})")
         
         # 传递给图卷积
         entity_gcn_emb, user_gcn_emb, item_adj = self.gcn(
@@ -466,7 +466,7 @@ class Recommender(nn.Module):
             self.edge_type,
             self.interact_mat
         )
-        print(f"entity_gcn_emb.shape: {entity_gcn_emb.shape}, expected: ({self.n_entities}, {self.emb_size})")
+        # print(f"entity_gcn_emb.shape: {entity_gcn_emb.shape}, expected: ({self.n_entities}, {self.emb_size})")
         
         u_e = user_gcn_emb[user]
         i_e = entity_gcn_emb[item]
@@ -603,11 +603,11 @@ class Recommender(nn.Module):
         return ret
 
     def light_gcn(self, user_embedding, item_embedding, adj):
-        print("into light gcn~~~")
+        # print("into light gcn~~~")
         ego_embeddings = torch.cat((user_embedding, item_embedding), dim=0)
         all_embeddings = [ego_embeddings]
-        print(adj.shape)  # 确保 adj 的形状是 (num_nodes, num_nodes)
-        print(ego_embeddings.shape)  # 确保 ego_embeddings 的形状是 (num_nodes, embedding_dim)
+        # print(adj.shape)  # 确保 adj 的形状是 (num_nodes, num_nodes)
+        # print(ego_embeddings.shape)  # 确保 ego_embeddings 的形状是 (num_nodes, embedding_dim)
 
 
 
