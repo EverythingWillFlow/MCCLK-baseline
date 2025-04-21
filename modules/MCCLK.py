@@ -8,13 +8,13 @@ from torch_scatter import scatter_mean, scatter_softmax, scatter_sum
 class Aggregator(nn.Module):
     def __init__(self, n_users):
         super(Aggregator, self).__init__()
-        print("into aggregator init ")
+        #print("into aggregator init ")
         self.n_users = n_users
 
     def forward(self, entity_emb, user_emb,
                 edge_index, edge_type, interact_mat,
                 weight):
-        print("into aggregator forward ")
+        #print("into aggregator forward ")
         torch.cuda.empty_cache()
             # Add safety checks
         head, tail = edge_index
@@ -93,7 +93,7 @@ class GraphConv(nn.Module):
     def __init__(self, channel, n_hops, n_users,
                   n_relations, interact_mat,
                  ind, node_dropout_rate=0.5, mess_dropout_rate=0.1):
-        print("into GRAPh Conv~~")
+        #print("into GRAPh Conv~~")
         super(GraphConv, self).__init__()
         
         self.convs = nn.ModuleList()
@@ -128,7 +128,7 @@ class GraphConv(nn.Module):
         initializer = nn.init.xavier_uniform_
         weight = initializer(torch.empty(n_relations - 1, channel))
         self.weight = nn.Parameter(weight)  # [n_relations - 1, in_channel]
-        print("into n_hops~")
+        #print("into n_hops~")
         for i in range(n_hops):
             self.convs.append(Aggregator(n_users=n_users))
 
@@ -318,7 +318,7 @@ class GraphConv(nn.Module):
 
 class Recommender(nn.Module):
     def __init__(self, data_config, args_config, graph, adj_mat):
-        print("into init~~~")
+        #print("into init~~~")
         super(Recommender, self).__init__()
 
         self.n_users = data_config['n_users']
@@ -392,11 +392,11 @@ class Recommender(nn.Module):
 
 
     def _init_weight(self):
-        print("into weight~~~")
+        #print("into weight~~~")
         #initializer = nn.init.xavier_uniform_
         #self.all_embed = initializer(torch.empty(self.n_nodes, self.emb_size))
         #self.interact_mat = self._convert_sp_mat_to_sp_tensor(self.adj_mat).to(self.device)
-        print("into weight~~~")
+        #print("into weight~~~")
         initializer = nn.init.xavier_uniform_
         # 使用修正后的维度初始化
         self.all_embed = initializer(torch.empty(self.n_entities, self.emb_size))
@@ -412,7 +412,7 @@ class Recommender(nn.Module):
         self.interact_mat = self._convert_sp_mat_to_sp_tensor(self.adj_mat).to(self.device)
 
     def _init_model(self):
-        print("into model~~~")
+        #print("into model~~~")
         return GraphConv(channel=self.emb_size,
                          n_hops=self.context_hops,
                          n_users=self.n_users,
@@ -442,7 +442,7 @@ class Recommender(nn.Module):
         self,
         batch=None,
                 ):
-        print("into forward~~~")
+        #print("into forward~~~")
         
         user = batch['users']
         item = batch['items']
